@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 /**
  * Database client
@@ -48,6 +48,19 @@ class DBClient {
    */
   async nbFiles() {
     return this.fileCollection.countDocuments();
+  }
+
+  /**
+   * Find a user by its id
+   * @param {string} _id - User id
+   * @returns {Promise<Object>}
+   * @async
+   */
+  async findUserById(_id) {
+    if (!(_id instanceof ObjectId)) {
+      _id = new ObjectId(_id);
+    }
+    return this.userCollection.findOne({ _id });
   }
 }
 

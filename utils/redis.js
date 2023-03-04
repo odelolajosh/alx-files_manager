@@ -39,9 +39,9 @@ class RedisClient {
 
   /**
    * Set a value in the database
-   * @param {string} key
-   * @param {string} value
-   * @param {number} duration
+   * @param {string} key - Key to store
+   * @param {string} value - Value to store
+   * @param {number} duration - Duration in seconds
    * @async
    */
   async set(key, value, duration) {
