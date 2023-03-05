@@ -56,7 +56,8 @@ class DBClient {
    * @returns {Promise<Object>}
    * @async
    */
-  async findUserById(_id) {
+  async findUserById(id) {
+    let _id = id;
     if (!(_id instanceof ObjectId)) {
       _id = new ObjectId(_id);
     }
