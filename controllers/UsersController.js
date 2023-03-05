@@ -14,7 +14,7 @@ export default class UsersController {
     }
 
     if (await dbClient.userCollection.findOne({ email })) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'Already exist' });
     }
 
     const user = await dbClient.userCollection.insertOne({
