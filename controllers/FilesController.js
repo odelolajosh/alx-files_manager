@@ -37,6 +37,9 @@ export default class FilesController {
     const { id } = req.params;
     const file = await dbClient.findUserFileById(userId, id);
     if (!file) return res.status(404).json({ error: 'Not found' });
+		file.id = file._id;
+		delete file._id;
+		delete file.localPath;
     return res.status(200).json(file);
   }
 
