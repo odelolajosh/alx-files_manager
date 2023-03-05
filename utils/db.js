@@ -63,7 +63,7 @@ class DBClient {
     }
     return this.userCollection.findOne({ _id });
   }
-  
+
   /**
    * Find a file by its id
    * @param {string} _id - File id
