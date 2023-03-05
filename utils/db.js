@@ -124,6 +124,15 @@ class DBClient {
     const total = await this.fileCollection.countDocuments({ parentId });
     return { files, total };
   }
+
+
+  async updateFileById(id, data) {
+    let _id = id;
+    if (!(_id instanceof ObjectId)) {
+      _id = new ObjectId(_id);
+    }
+    return this.fileCollection.updateOne({ _id }, data);
+  }
 }
 
 const dbClient = new DBClient();
