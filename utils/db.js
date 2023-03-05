@@ -63,6 +63,67 @@ class DBClient {
     }
     return this.userCollection.findOne({ _id });
   }
+  
+  /**
+   * Find a file by its id
+   * @param {string} _id - File id
+   * @returns {Promise<Object>}
+   * @async
+   */
+  async findFileById(id) {
+    let _id = id;
+    if (!(_id instanceof ObjectId)) {
+      _id = new ObjectId(_id);
+    }
+    return this.fileCollection.findOne({ _id });
+  }
+
+  /**
+   * Insert a new file in the database
+   * @param {Object} user - User object
+   * @returns {Promise<Object>}
+   * @async
+   */
+  async insertFile(file) {
+    return this.fileCollection.insertOne(file);
+  }
+
+  /**
+   * Find a file by user id and file id
+   * @param {string} userId - User id
+   * @param {string} fileId - File id
+   * @returns {Promise<Object>}
+   * @async
+   */
+  async findUserFileById(userId, fileId) {
+    let _id = fileId;
+    if (!(_id instanceof ObjectId)) {
+      _id = new ObjectId(_id);
+    }
+    return this.fileCollection.findOne({ userId, _id });
+  }
+
+  /**
+   * Find a file by user id and file id
+   * @param {string} userId - User id
+   * @param {string} parentId - folder id
+   * @param {Object} options - File id
+   * @async
+   */
+  async findUserFiles(userId, parentId = 0, options = {}) {
+    const { page = 0, limit = 10 } = options;
+    const pipeline = [
+      { $match: { parentId, userId } },
+      { $sort: { createdAt: -1 } },
+      { $skip: page * limit },
+      { $limit: limit },
+      { $addFields: { id: '$_id' } },
+      { $project: { _id: 0, localPath: 0 } },
+    ];
+    const files = await this.fileCollection.aggregate(pipeline).toArray();
+    const total = await this.fileCollection.countDocuments({ parentId });
+    return { files, total };
+  }
 }
 
 const dbClient = new DBClient();
