@@ -18,7 +18,7 @@ export default class UsersController {
     }
 
     const user = await dbClient.userCollection.insertOne({
-      email: String(email).trim(),
+      email,
       password: sha1(password),
     });
 
