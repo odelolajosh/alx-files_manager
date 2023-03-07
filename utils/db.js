@@ -125,7 +125,6 @@ class DBClient {
     return { files, total };
   }
 
-
   async updateFileById(id, data) {
     let _id = id;
     if (!(_id instanceof ObjectId)) {
