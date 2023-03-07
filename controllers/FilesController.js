@@ -9,10 +9,7 @@ const FOLDER_LOCATION = process.env.FOLDER_PATH || '/tmp/files_manager';
 export default class FilesController {
   /** POST /files */
   static async postUpload(req, res) {
-    const token = req.headers['x-token'];
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.userId;
     const document = await FilesController._getFileProperties(req);
     if (document.error) return res.status(400).json({ error: document.error });
     document.userId = userId;
@@ -30,7 +27,7 @@ export default class FilesController {
 
   /** GET /files:id */
   static async getShow(req, res) {
-    const token = req.headers['x-token'];
+    const token = req.get('X-Token');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const userId = await redisClient.get(`auth_${token}`);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -45,7 +42,7 @@ export default class FilesController {
 
   /** GET /files */
   static async getIndex(req, res) {
-    const token = req.headers['x-token'];
+    const token = req.get('X-Token');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const userId = await redisClient.get(`auth_${token}`);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -56,7 +53,7 @@ export default class FilesController {
 
   /** PUT /files/:id/publish */
   static async putPublish(req, res) {
-    const token = req.headers['x-token'];
+    const token = req.get('X-Token');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const userId = await redisClient.get(`auth_${token}`);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -75,7 +72,7 @@ export default class FilesController {
 
   /** PUT /files/:id/unpublish */
   static async putUnpublish(req, res) {
-    const token = req.headers['x-token'];
+    const token = req.get('X-Token');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const userId = await redisClient.get(`auth_${token}`);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
