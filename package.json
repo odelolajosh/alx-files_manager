@@ -10,7 +10,7 @@
     "start-server": "nodemon --exec babel-node --presets @babel/preset-env ./server.js",
     "start-worker": "nodemon --exec babel-node --presets @babel/preset-env ./worker.js",
     "dev": "nodemon --exec babel-node --presets @babel/preset-env",
-    "test": "mocha --require @babel/register --exit --recursive ./test"
+    "test": "cross-env DB_DATABASE=files_manager_test FOLDER_PATH=/tmp/files_manager_test mocha --require @babel/register --exit --recursive"
   },
   "repository": {
     "type": "git",
@@ -41,6 +41,7 @@
     "@babel/register": "^7.21.0",
     "chai": "^4.3.7",
     "chai-http": "^4.3.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.35.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.27.5",

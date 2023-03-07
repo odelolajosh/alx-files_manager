@@ -4,7 +4,7 @@ import { MongoClient, ObjectId } from 'mongodb';
  * Database client
  * @class
  */
-class DBClient {
+export class DBClient {
   /**
    * Create a database client
    * @constructor
