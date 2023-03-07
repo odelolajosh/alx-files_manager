@@ -57,7 +57,7 @@ class DBClient {
    * @async
    */
   async findUserById(id) {
-    let _id = new ObjectId(id);
+    const _id = new ObjectId(id);
     return this.userCollection.findOne({ _id });
   }
 
@@ -68,7 +68,7 @@ class DBClient {
    * @async
    */
   async findFileById(id) {
-    let _id = new ObjectId(id);
+    const _id = new ObjectId(id);
     return this.fileCollection.findOne({ _id });
   }
 
@@ -90,8 +90,8 @@ class DBClient {
    * @async
    */
   async findUserFileById(userId, fileId) {
-    let _id = new ObjectId(fileId);
-    let _userId = new ObjectId(userId);
+    const _id = new ObjectId(fileId);
+    const _userId = new ObjectId(userId);
     return this.fileCollection.findOne({ userId: _userId, _id });
   }
 

@@ -42,7 +42,7 @@ export default class FilesController {
 
   /** PUT /files/:id/publish */
   static async putPublish(req, res) {
-    const { params: {  id }, userId } = req;
+    const { params: { id }, userId } = req;
     const file = await dbClient.findUserFileById(userId, id);
     if (!file) return res.status(404).json({ error: 'Not found' });
     if (!file.isPublic) {
@@ -71,7 +71,9 @@ export default class FilesController {
     if (!name) return { error: 'Missing name' };
     if (!type || !(ACCEPTED_TYPES.includes(type))) return { error: 'Missing type' };
     if (type !== 'folder' && !data) return { error: 'Missing data' };
-    const file = { name, type, parentId, isPublic, data }
+    const file = {
+      name, type, parentId, isPublic, data,
+    };
     if (parentId !== 0) {
       const parent = await dbClient.findFileById(parentId);
       if (!parent) return { error: 'Parent not found' };
@@ -94,9 +96,10 @@ export default class FilesController {
 
   /** remove sensitive properties from file object */
   static _sanitizeFile(file) {
-    file.id = file._id;
-    delete file.localPath;
-    delete file._id;
-    return file;
+    const clone = { ...file };
+    clone.id = clone._id;
+    delete clone.localPath;
+    delete clone._id;
+    return clone;
   }
 }

@@ -1,5 +1,5 @@
-import redisClient from '../utils/redis';
 import { ObjectId } from 'mongodb';
+import redisClient from '../utils/redis';
 
 const requireAuth = async (req, res, next) => {
   const token = req.get('X-Token');
