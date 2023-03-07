@@ -57,10 +57,7 @@ class DBClient {
    * @async
    */
   async findUserById(id) {
-    let _id = id;
-    if (!(_id instanceof ObjectId)) {
-      _id = new ObjectId(_id);
-    }
+    let _id = new ObjectId(id);
     return this.userCollection.findOne({ _id });
   }
 
@@ -71,10 +68,7 @@ class DBClient {
    * @async
    */
   async findFileById(id) {
-    let _id = id;
-    if (!(_id instanceof ObjectId)) {
-      _id = new ObjectId(_id);
-    }
+    let _id = new ObjectId(id);
     return this.fileCollection.findOne({ _id });
   }
 
@@ -96,11 +90,9 @@ class DBClient {
    * @async
    */
   async findUserFileById(userId, fileId) {
-    let _id = fileId;
-    if (!(_id instanceof ObjectId)) {
-      _id = new ObjectId(_id);
-    }
-    return this.fileCollection.findOne({ userId, _id });
+    let _id = new ObjectId(fileId);
+    let _userId = new ObjectId(userId);
+    return this.fileCollection.findOne({ userId: _userId, _id });
   }
 
   /**
@@ -110,17 +102,20 @@ class DBClient {
    * @param {Object} options - File id
    * @async
    */
-  async findUserFiles(userId, parentId = 0, options = {}) {
+  async findUserFiles(userId, parent = 0, options = {}) {
     const { page = 0, limit = 20 } = options;
+    const parentId = parent === 0 ? 0 : new ObjectId(parent);
     const pipeline = [
-      { $match: { parentId, userId } },
+      { $match: { parentId, userId: new ObjectId(userId) } },
       { $sort: { createdAt: -1 } },
       { $skip: page * limit },
       { $limit: limit },
       { $addFields: { id: '$_id' } },
       { $project: { _id: 0, localPath: 0 } },
     ];
-    const files = await this.fileCollection.aggregate(pipeline).toArray();
+    const cursor = this.fileCollection.aggregate(pipeline);
+    const files = await cursor.toArray();
+    cursor.close();
     const total = await this.fileCollection.countDocuments({ parentId });
     return { files, total };
   }
@@ -136,3 +131,5 @@ class DBClient {
 
 const dbClient = new DBClient();
 export default dbClient;
+
+export { ObjectId };

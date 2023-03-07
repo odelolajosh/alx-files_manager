@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
+import dbClient, { ObjectId } from '../utils/db';
 
 const ACCEPTED_TYPES = ['folder', 'file', 'image'];
 const FOLDER_LOCATION = process.env.FOLDER_PATH || '/tmp/files_manager';
@@ -27,25 +26,15 @@ export default class FilesController {
 
   /** GET /files:id */
   static async getShow(req, res) {
-    const token = req.get('X-Token');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
+    const { params: { id }, userId } = req;
     const file = await dbClient.findUserFileById(userId, id);
     if (!file) return res.status(404).json({ error: 'Not found' });
-    file.id = file._id;
-    delete file._id;
-    delete file.localPath;
-    return res.status(200).json(file);
+    return res.status(200).json(FilesController._sanitizeFile(file));
   }
 
   /** GET /files */
   static async getIndex(req, res) {
-    const token = req.get('X-Token');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const { userId } = req;
     const { parentId = 0, page = 0 } = req.query;
     const { files = [] } = await dbClient.findUserFiles(userId, parentId, { page });
     return res.status(200).json(files);
@@ -53,40 +42,26 @@ export default class FilesController {
 
   /** PUT /files/:id/publish */
   static async putPublish(req, res) {
-    const token = req.get('X-Token');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
+    const { params: {  id }, userId } = req;
     const file = await dbClient.findUserFileById(userId, id);
     if (!file) return res.status(404).json({ error: 'Not found' });
     if (!file.isPublic) {
       await dbClient.updateFileById(file._id, { $set: { isPublic: true } });
       file.isPublic = true;
     }
-    file.id = file._id;
-    delete file._id;
-    delete file.localPath;
-    return res.status(200).json(file);
+    return res.status(200).json(FilesController._sanitizeFile(file));
   }
 
   /** PUT /files/:id/unpublish */
   static async putUnpublish(req, res) {
-    const token = req.get('X-Token');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
+    const { params: { id }, userId } = req;
     const file = await dbClient.findUserFileById(userId, id);
     if (!file) return res.status(404).json({ error: 'Not found' });
     if (file.isPublic) {
       await dbClient.updateFileById(file._id, { $set: { isPublic: false } });
       file.isPublic = false;
     }
-    file.id = file._id;
-    delete file._id;
-    delete file.localPath;
-    return res.status(200).json(file);
+    return res.status(200).json(FilesController._sanitizeFile(file));
   }
 
   static async _getFileProperties(req) {
@@ -96,14 +71,14 @@ export default class FilesController {
     if (!name) return { error: 'Missing name' };
     if (!type || !(ACCEPTED_TYPES.includes(type))) return { error: 'Missing type' };
     if (type !== 'folder' && !data) return { error: 'Missing data' };
+    const file = { name, type, parentId, isPublic, data }
     if (parentId !== 0) {
       const parent = await dbClient.findFileById(parentId);
       if (!parent) return { error: 'Parent not found' };
       if (parent.type !== 'folder') return { error: 'Parent is not a folder' };
+      file.parentId = new ObjectId(parentId);
     }
-    return {
-      name, type, parentId, isPublic, data,
-    };
+    return file;
   }
 
   static async _saveFile(document) {
@@ -115,5 +90,13 @@ export default class FilesController {
     } catch (error) {
       return { error: 'Error while saving file' };
     }
+  }
+
+  /** remove sensitive properties from file object */
+  static _sanitizeFile(file) {
+    file.id = file._id;
+    delete file.localPath;
+    delete file._id;
+    return file;
   }
 }
