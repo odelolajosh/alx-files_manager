@@ -3,7 +3,7 @@ import AppController from '../controllers/AppController';
 import AuthController from '../controllers/AuthController';
 import FilesController from '../controllers/FilesController';
 import UsersController from '../controllers/UsersController';
-import requireAuth from './requireAuth';
+import { requireAuth, optionalAuth } from './middlewares';
 
 const router = express.Router();
 
@@ -21,5 +21,7 @@ router.get('/files', requireAuth, FilesController.getIndex);
 router.get('/files/:id', requireAuth, FilesController.getShow);
 router.put('/files/:id/publish', requireAuth, FilesController.putPublish);
 router.put('/files/:id/unpublish', requireAuth, FilesController.putUnpublish);
+
+router.get('/files/:id/data', optionalAuth, FilesController.getFile);
 
 export default router;
