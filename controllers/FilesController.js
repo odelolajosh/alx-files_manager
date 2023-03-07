@@ -86,7 +86,7 @@ export default class FilesController {
     }
     try {
       const data = await fs.readFile(path);
-      const mimeType = mime.contentType(file.name) || 'text/plain'
+      const mimeType = mime.contentType(file.name) || 'text/plain';
       res.setHeader('Content-Length', data.length);
       res.setHeader('Content-Type', mimeType);
       return res.status(200).send(data);
@@ -130,7 +130,7 @@ export default class FilesController {
       await fs.mkdir(FOLDER_LOCATION, { recursive: true });
       const path = `${file.localPath}_${size}`;
       await fs.writeFile(path, thumbnail);
-      return { path }; 
+      return { path };
     } catch (error) {
       return { error: 'Error while saving thumbnail' };
     }

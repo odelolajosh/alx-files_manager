@@ -1,5 +1,6 @@
 import sha1 from 'sha1';
 import dbClient from '../utils/db';
+import { userQueue } from '../worker';
 
 export default class UsersController {
   static async postNew(req, res) {
@@ -16,6 +17,7 @@ export default class UsersController {
       password: sha1(password),
     });
 
+    userQueue.add({ userId: user.insertedId });
     return res.status(201).json({ id: user.insertedId, email });
   }
 
