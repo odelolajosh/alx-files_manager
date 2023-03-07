@@ -5,7 +5,7 @@ import { promisify } from 'util';
  * Redis client
  * @class RedisClient
  */
-class RedisClient {
+export class RedisClient {
   /**
    * Create a redis client
    * @constructor
