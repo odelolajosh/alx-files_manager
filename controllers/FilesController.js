@@ -9,7 +9,7 @@ const FOLDER_LOCATION = process.env.FOLDER_PATH || '/tmp/files_manager';
 export default class FilesController {
   /** POST /files */
   static async postUpload(req, res) {
-    const userId = req.userId;
+    const { userId } = req;
     const document = await FilesController._getFileProperties(req);
     if (document.error) return res.status(400).json({ error: document.error });
     document.userId = userId;

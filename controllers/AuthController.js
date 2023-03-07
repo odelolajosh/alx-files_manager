@@ -19,7 +19,7 @@ export default class AuthController {
 
   /** Disconnect a user */
   static async getDisconnect(req, res) {
-    await redisClient.del(`auth_${token}`);
+    await redisClient.del(`auth_${req.token}`);
     return res.status(204).end();
   }
 }
