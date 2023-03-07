@@ -1,6 +1,8 @@
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync as fsExistsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import mime from 'mime-types';
 import dbClient, { ObjectId } from '../utils/db';
+import { fileQueue } from '../worker';
 
 const ACCEPTED_TYPES = ['folder', 'file', 'image'];
 const FOLDER_LOCATION = process.env.FOLDER_PATH || '/tmp/files_manager';
@@ -13,12 +15,13 @@ export default class FilesController {
     if (document.error) return res.status(400).json({ error: document.error });
     document.userId = userId;
     if (document.type !== 'folder') {
-      const { localPath, error } = await FilesController._saveFile(document);
+      const { localPath, error } = await FilesController._saveDocument(document);
       if (error) return res.status(400).json({ error });
       document.localPath = localPath;
     }
     delete document.data;
     const file = await dbClient.fileCollection.insertOne(document);
+    fileQueue.add({ fileId: file.insertedId, userId });
     delete document.localPath;
     delete document._id;
     return res.status(201).json({ id: file.insertedId, ...document });
@@ -64,6 +67,34 @@ export default class FilesController {
     return res.status(200).json(FilesController._sanitizeFile(file));
   }
 
+  /** GET /files/:id/data */
+  static async getFile(req, res) {
+    const { params: { id }, query: { size }, userId } = req;
+    const file = await dbClient.findFileById(id);
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!file.isPublic && String(file.userId) !== String(userId)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (file.type === 'folder') {
+      return res.status(400).json({ error: 'A folder doesn\'t have content' });
+    }
+    const path = size ? `${file.localPath}_${size}` : file.localPath;
+    if (!fsExistsSync(path)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    try {
+      const data = await fs.readFile(path);
+      const mimeType = mime.contentType(file.name) || 'text/plain'
+      res.setHeader('Content-Length', data.length);
+      res.setHeader('Content-Type', mimeType);
+      return res.status(200).send(data);
+    } catch (error) {
+      return res.status(404).json({ error: 'Error while reading file' });
+    }
+  }
+
   static async _getFileProperties(req) {
     const {
       name, type, parentId = 0, isPublic = false, data,
@@ -83,7 +114,7 @@ export default class FilesController {
     return file;
   }
 
-  static async _saveFile(document) {
+  static async _saveDocument(document) {
     try {
       await fs.mkdir(FOLDER_LOCATION, { recursive: true });
       const localPath = `${FOLDER_LOCATION}/${uuidv4()}`;
@@ -91,6 +122,17 @@ export default class FilesController {
       return { localPath };
     } catch (error) {
       return { error: 'Error while saving file' };
+    }
+  }
+
+  static async _saveThumbnail(thumbnail, file, size) {
+    try {
+      await fs.mkdir(FOLDER_LOCATION, { recursive: true });
+      const path = `${file.localPath}_${size}`;
+      await fs.writeFile(path, thumbnail);
+      return { path }; 
+    } catch (error) {
+      return { error: 'Error while saving thumbnail' };
     }
   }
 
