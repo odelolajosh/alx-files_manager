@@ -44,7 +44,7 @@ export default class FilesController {
   /** GET /files */
   static async getIndex(req, res) {
     const { userId } = req;
-    const { parentId = 0, page = 0 } = req.query;
+    const { parentId = '0', page = 0 } = req.query;
     try {
       const { files = [] } = await dbClient.findUserFiles(userId, parentId, { page });
       return res.status(200).json(files);
@@ -115,7 +115,7 @@ export default class FilesController {
 
   static async _getFileProperties(req) {
     const {
-      name, type, parentId = 0, isPublic = false, data,
+      name, type, parentId = '0', isPublic = false, data,
     } = req.body;
     if (!name) return { error: 'Missing name' };
     if (!type || !(ACCEPTED_TYPES.includes(type))) return { error: 'Missing type' };
@@ -123,11 +123,13 @@ export default class FilesController {
     const file = {
       name, type, parentId, isPublic, data,
     };
-    if (parentId !== 0) {
+    if (String(parentId) !== '0') {
       const parent = await dbClient.findFileById(parentId);
       if (!parent) return { error: 'Parent not found' };
       if (parent.type !== 'folder') return { error: 'Parent is not a folder' };
       file.parentId = new ObjectId(parentId);
+    } else {
+      file.parentId = '0';
     }
     return file;
   }

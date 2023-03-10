@@ -104,7 +104,7 @@ export class DBClient {
    */
   async findUserFiles(userId, parent = 0, options = {}) {
     const { page = 0, limit = 20 } = options;
-    const parentId = parent === 0 ? 0 : new ObjectId(parent);
+    const parentId = String(parent) === '0' ? '0' : new ObjectId(parent);
     const pipeline = [
       { $match: { parentId, userId: new ObjectId(userId) } },
       { $sort: { createdAt: -1 } },
