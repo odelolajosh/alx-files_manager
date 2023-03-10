@@ -26,6 +26,7 @@ export default class FilesController {
     }
     delete document.localPath;
     delete document._id;
+    if (document.parentId === '0') document.parentId = 0;
     return res.status(201).json({ id: file.insertedId, ...document });
   }
 
@@ -44,7 +45,7 @@ export default class FilesController {
   /** GET /files */
   static async getIndex(req, res) {
     const { userId } = req;
-    const { parentId = '0', page = 0 } = req.query;
+    const { parentId = 0, page = 0 } = req.query;
     try {
       const { files = [] } = await dbClient.findUserFiles(userId, parentId, { page });
       return res.status(200).json(files);
@@ -115,7 +116,7 @@ export default class FilesController {
 
   static async _getFileProperties(req) {
     const {
-      name, type, parentId = '0', isPublic = false, data,
+      name, type, parentId = 0, isPublic = false, data,
     } = req.body;
     if (!name) return { error: 'Missing name' };
     if (!type || !(ACCEPTED_TYPES.includes(type))) return { error: 'Missing type' };
