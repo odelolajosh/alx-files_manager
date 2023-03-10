@@ -2,15 +2,16 @@ import chai from 'chai';
 import chaiHttp from 'chai-http';
 
 import { v4 as uuidv4 } from 'uuid';
+import fs, { promises as fsp } from 'fs';
 
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import { promisify } from 'util';
 import redis from 'redis';
 import sha1 from 'sha1';
 
 chai.use(chaiHttp);
 
-describe('GET /files', () => {
+describe('POST /files', () => {
 	let testClientDb;
 	let testRedisClient;
 	let redisDelAsync;
@@ -22,7 +23,7 @@ describe('GET /files', () => {
 	let initialUserId = null;
 	let initialUserToken = null;
 
-	let initialFiles = [];
+	const folderTmpFilesManagerPath = process.env.FOLDER_PATH || '/tmp/files_manager';
 
 	const fctRandomString = () => {
 		return Math.random().toString(36).substring(2, 15);
@@ -33,6 +34,13 @@ describe('GET /files', () => {
 			await redisDelAsync(key);
 		});
 	}
+	const fctRemoveTmp = () => {
+		if (fs.existsSync(folderTmpFilesManagerPath)) {
+			fs.readdirSync(`${folderTmpFilesManagerPath}/`).forEach((i) => {
+				fs.unlinkSync(`${folderTmpFilesManagerPath}/${i}`)
+			})
+		}
+	}
 
 	beforeEach(async () => {
 		const dbInfo = {
@@ -42,7 +50,7 @@ describe('GET /files', () => {
 		};
 
 		const client = await MongoClient.connect(`mongodb://${dbInfo.host}:${dbInfo.port}/${dbInfo.database}`);
-		
+
 		testClientDb = client.db(dbInfo.database);
 
 		await testClientDb.collection('users').deleteMany({})
@@ -55,19 +63,6 @@ describe('GET /files', () => {
 		}
 		const inserted = await testClientDb.collection('users').insertOne(initialUser);
 		initialUserId = inserted.insertedId.toString();
-
-		// Add folders
-		for (let i = 0; i < 25; i += 1) {
-			const item = {
-				userId: new ObjectId(initialUserId),
-				name: fctRandomString(),
-				type: "folder",
-				parentId: '0'
-			};
-			const createdFile = await testClientDb.collection('files').insertOne(item);
-			item.id = createdFile.insertedId.toString();
-			initialFiles.push(item)
-		}
 
 		testRedisClient = redis.createClient();
 
@@ -91,35 +86,55 @@ describe('GET /files', () => {
 
 	afterEach(() => {
 		fctRemoveAllRedisKeys();
+		fctRemoveTmp();
 	});
 
-	it('GET /files with no parentId and no page', (done) => {
+	it('POST /files creates a file at the root', (done) => {
+		const fileClearContent = fctRandomString();
+		const fileData = {
+			name: fctRandomString(),
+			type: 'file',
+			data: Buffer.from(fileClearContent, 'binary').toString('base64')
+		}
+
+		let filesInTmpFilesManager = [];
+		if (fs.existsSync(folderTmpFilesManagerPath)) {
+			filesInTmpFilesManager = fs.readdirSync(folderTmpFilesManagerPath);
+		}
+
 		chai.request('http://localhost:5000')
-			.get(`/files`)
+			.post('/files')
 			.set('X-Token', initialUserToken)
-			.end((err, res) => {
+			.send(fileData)
+			.end(async (err, res) => {
 				chai.expect(err).to.be.null;
-				chai.expect(res).to.have.status(200);
+				chai.expect(res).to.have.status(201);
 
-				const resList = res.body;
-				chai.expect(resList.length).to.equal(20);
+				const resFile = res.body;
+				chai.expect(resFile.name).to.equal(fileData.name);
+				chai.expect(resFile.userId).to.equal(initialUserId);
+				chai.expect(resFile.type).to.equal(fileData.type);
+				chai.expect(resFile.parentId).to.equal(0);
 
-				resList.forEach((item) => {
-					const itemIdx = initialFiles.findIndex((i) => i.id == item.id);
-					chai.assert.isAtLeast(itemIdx, 0);
+				const docs = await testClientDb.collection('files').find({}).toArray()
+				chai.expect(docs.length).to.equal(1);
+				const docFile = docs[0];
+				chai.expect(docFile.name).to.equal(fileData.name);
+				chai.expect(docFile._id.toString()).to.equal(resFile.id);
+				chai.expect(docFile.userId.toString()).to.equal(initialUserId);
+				chai.expect(docFile.type).to.equal(fileData.type);
+				chai.expect(docFile.parentId.toString()).to.equal('0');
 
-					const itemInit = initialFiles.splice(itemIdx, 1)[0];
-					chai.expect(itemInit).to.not.be.null;
+				let newFilesInTmpFilesManager = [];
+				if (fs.existsSync(folderTmpFilesManagerPath)) {
+					newFilesInTmpFilesManager = fs.readdirSync(folderTmpFilesManagerPath);
+				}
+				chai.expect(newFilesInTmpFilesManager.length).to.equal(filesInTmpFilesManager.length + 1);
+				const newFileInDiskPath = newFilesInTmpFilesManager.filter(x => !filesInTmpFilesManager.includes(x));
 
-					chai.expect(itemInit.id).to.equal(item.id);
-					chai.expect(itemInit.name).to.equal(item.name);
-					chai.expect(itemInit.type).to.equal(item.type);
-					chai.expect(itemInit.parentId).to.equal(item.parentId);
-				});
-
-				chai.expect(initialFiles.length).to.equal(5);
-
+				const newFileInDiskContent = await fsp.readFile(`${folderTmpFilesManagerPath}/${newFileInDiskPath[0]}`, 'utf8');
+				chai.expect(newFileInDiskContent).to.equal(fileClearContent);
 				done();
 			});
-	}).timeout(30000);
+	}).timeout(20000);
 });
